@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>我的單字庫</title>
+  <style>
+    body { font-family: Arial, "Noto Sans TC", sans-serif; max-width:720px; margin:40px auto; padding:0 16px; }
+    h1 { color:#1f6feb; }
+    input { padding:8px; font-size:16px; width:60%; }
+    button { padding:9px 12px; font-size:16px; margin-left:8px; }
+    ul { margin-top:16px; }
+    li { margin:6px 0; }
+    .small { font-size:13px; color:#555; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <h1>我的單字庫</h1>
+  <p>在這裡輸入單字，按「新增」就會存到瀏覽器裡（localStorage）。</p>
+
+  <input id="wordInput" placeholder="輸入單字（例如: apple）" autocomplete="off">
+  <button id="addBtn">新增</button>
+
+  <p class="small">已儲存單字：</p>
+  <ul id="wordList"></ul>
+
+  <script>
+    // 從 localStorage 載入
+    let words = JSON.parse(localStorage.getItem("words")) || [];
+
+    function renderWords() {
+      const list = document.getElementById("wordList");
+      list.innerHTML = "";
+      words.forEach((word, index) => {
+        const li = document.createElement("li");
+        li.textContent = word + " ";
+        const del = document.createElement("button");
+        del.textContent = "刪除";
+        del.style.marginLeft = "8px";
+        del.onclick = () => { deleteWord(index); };
+        li.appendChild(del);
+        list.appendChild(li);
+      });
+    }
+
+    function addWord() {
+      const input = document.getElementById("wordInput");
+      const word = input.value.trim();
+      if (!word) return alert("請輸入單字");
+      // 避免重複（可選）
+      if (words.includes(word)) {
+        alert("這個單字已存在");
+        input.value = "";
+        return;
+      }
+      words.push(word);
+      localStorage.setItem("words", JSON.stringify(words));
+      input.value = "";
+      renderWords();
+    }
+
+    function deleteWord(index) {
+      if (!confirm("確定要刪除這個單字？")) return;
+      words.splice(index, 1);
+      localStorage.setItem("words", JSON.stringify(words));
+      renderWords();
+    }
+
+    document.getElementById("addBtn").addEventListener("click", addWord);
+    document.getElementById("wordInput").addEventListener("keyup", (e) => {
+      if (e.key === "Enter") addWord();
+    });
+
+    // 初始顯示
+    renderWords();
+  </script>
+</body>
+</html>
