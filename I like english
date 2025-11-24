@@ -1,0 +1,827 @@
+
+
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>間隔重複單字助手 (優化版)</title>
+    <style>
+        /* CSS 樣式 (保留大部分原始設計，僅微調) */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #007bff;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 介面切換 */
+        #home-page, #quiz-page, #edit-page {
+            display: none; /* 預設全部隱藏，由 JS 控制顯示 */
+        }
+        #home-page {
+            display: block; /* 預設顯示首頁 */
+        }
+
+        /* 單字集管理 */
+        #set-management {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        #custom-set-input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
+            width: 60%;
+            box-sizing: border-box; /* 優化佈局 */
+        }
+
+        #add-custom-set-btn {
+            padding: 8px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #add-custom-set-btn:hover {
+            background-color: #218838;
+        }
+
+        .word-set-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+        }
+
+        .word-set-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .word-set-list li:last-child {
+            border-bottom: none;
+        }
+
+        .set-name-display {
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+
+        .edit-set-btn, .delete-set-btn {
+            background: none;
+            border: none;
+            color: #007bff;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 0.9em;
+        }
+
+        .delete-set-btn {
+            color: #dc3545;
+        }
+
+        /* 統計與開始按鈕 */
+        #today-count {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffc107;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        #start-quiz-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.5em;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #start-quiz-btn:hover {
+            background-color: #0056b3;
+        }
+
+        #start-quiz-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 單字卡介面 */
+        #quiz-page {
+            text-align: center;
+        }
+        .word-card {
+            background: #fff;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 40px 20px;
+            margin-bottom: 20px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .word-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 123, 255, 0.2);
+        }
+
+        .card-front {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .card-back {
+            font-size: 1.5em;
+            color: #666;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .quiz-controls {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 500px;
+            margin: auto; /* 置中 */
+        }
+
+        .control-btn {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            flex: 1;
+            margin: 0 10px;
+            transition: opacity 0.3s;
+        }
+
+        #mastered-btn {
+            background-color: #28a745;
+        }
+
+        #not-mastered-btn {
+            background-color: #dc3545;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .quiz-controls-hidden {
+            display: none;
+        }
+
+        #quiz-status {
+            margin-top: 15px;
+            font-size: 1.1em;
+            color: #6c757d;
+        }
+        
+        /* 編輯介面樣式 */
+        #edit-page {
+            padding: 20px 0;
+        }
+
+        #edit-textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 1em;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        
+        #edit-controls {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .edit-control-btn {
+            padding: 10px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+        }
+        
+        #save-edit-btn {
+            background-color: #007bff;
+        }
+        
+        #cancel-edit-btn {
+            background-color: #6c757d;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>間隔重複單字助手</h1>
+        </header>
+
+        <div id="home-page">
+            <section id="set-management">
+                <h3>📚 單字集管理</h3>
+                <div style="display: flex; margin-bottom: 15px;">
+                    <input type="text" id="custom-set-input" placeholder="輸入單字集名稱新增/編輯">
+                    <button id="add-custom-set-btn">新增/編輯</button>
+                </div>
+
+                <ul class="word-set-list" id="word-set-list">
+                    </ul>
+            </section>
+
+            <div id="today-count">
+                今日待背單字: <span id="count-value">0</span>
+            </div>
+
+            <button id="start-quiz-btn" disabled>開始背單字</button>
+        </div>
+        
+        <div id="quiz-page">
+            <h3>📝 今日背誦</h3>
+            <div id="quiz-status"></div>
+            <div class="word-card" id="word-card">
+                <div class="card-front" id="card-front">點擊開始</div>
+                <div class="card-back" id="card-back"></div>
+            </div>
+
+            <div class="quiz-controls quiz-controls-hidden" id="quiz-controls">
+                <button class="control-btn" id="mastered-btn">我 已 背 熟 👍</button>
+                <button class="control-btn" id="not-mastered-btn">我 還 沒 背 熟</button>
+            </div>
+
+            <button class="control-btn" style="background-color: #6c757d; margin-top: 20px;" onclick="goToHomePage()">返回首頁</button>
+        </div>
+
+        <div id="edit-page">
+            <h3 id="edit-title">✏️ 編輯單字集: [名稱]</h3>
+            <p style="color: #dc3545;">請以 英 文 = 中 文 格式輸入，每行一組單字。</p>
+            <textarea id="edit-textarea"></textarea>
+            <div id="edit-controls">
+                <button id="save-edit-btn" class="edit-control-btn">儲存並返回</button>
+                <button id="cancel-edit-btn" class="edit-control-btn">取消</button>
+            </div>
+        </div>
+
+    </div>
+
+ <script>
+    // DOM 元素快取
+    const HOME_PAGE = document.getElementById('home-page');
+    const QUIZ_PAGE = document.getElementById('quiz-page');
+    const EDIT_PAGE = document.getElementById('edit-page');
+    const WORD_SET_LIST = document.getElementById('word-set-list');
+    const START_QUIZ_BTN = document.getElementById('start-quiz-btn');
+    const COUNT_VALUE = document.getElementById('count-value');
+    const CUSTOM_SET_INPUT = document.getElementById('custom-set-input');
+    const ADD_CUSTOM_SET_BTN = document.getElementById('add-custom-set-btn');
+
+    const WORD_CARD = document.getElementById('word-card');
+    const CARD_FRONT = document.getElementById('card-front');
+    const CARD_BACK = document.getElementById('card-back');
+    const QUIZ_CONTROLS = document.getElementById('quiz-controls');
+    const MASTERED_BTN = document.getElementById('mastered-btn');
+    const NOT_MASTERED_BTN = document.getElementById('not-mastered-btn');
+    const QUIZ_STATUS = document.getElementById('quiz-status');
+    
+    const EDIT_TITLE = document.getElementById('edit-title');
+    const EDIT_TEXTAREA = document.getElementById('edit-textarea');
+    const SAVE_EDIT_BTN = document.getElementById('save-edit-btn');
+    const CANCEL_EDIT_BTN = document.getElementById('cancel-edit-btn');
+
+    // --- 單字列表 ---
+
+    const defaultSets = {
+        '龍騰高中英文第5課(推測)': [
+            { en: 'preserve', cn: '保護；維護（古蹟、傳統）', mastered: 0, nextReview: 0 },
+            { en: 'tradition', cn: '傳統', mastered: 0, nextReview: 0 },
+            { en: 'historic', cn: '歷史性的；有歷史意義的', mastered: 0, nextReview: 0 },
+            { en: 'marvel', cn: '令人驚奇的事物；奇蹟', mastered: 0, nextReview: 0 },
+            { en: 'breathtaking', cn: '令人屏息的；極美的', mastered: 0, nextReview: 0 },
+            { en: 'monument', cn: '紀念碑；歷史遺跡', mastered: 0, nextReview: 0 },
+            { en: 'architecture', cn: '建築學；建築風格', mastered: 0, nextReview: 0 },
+            { en: 'ancient', cn: '古老的；古代的', mastered: 0, nextReview: 0 },
+            { en: 'shrine', cn: '神社；神龕', mastered: 0, nextReview: 0 },
+            { en: 'temple', cn: '寺廟', mastered: 0, nextReview: 0 },
+            { en: 'spiritual', cn: '精神上的；心靈的', mastered: 0, nextReview: 0 },
+            { en: 'serenity', cn: '寧靜；安詳', mastered: 0, nextReview: 0 },
+            { en: 'cuisine', cn: '菜餚；烹飪（通常指高級或特定地區的）', mastered: 0, nextReview: 0 },
+            { en: 'delicate', cn: '精緻的；清淡的', mastered: 0, nextReview: 0 },
+            { en: 'ritual', cn: '儀式；慣例', mastered: 0, nextReview: 0 },
+            { en: 'craftsmanship', cn: '工藝；技藝', mastered: 0, nextReview: 0 },
+            { en: 'vibrant', cn: '充滿活力的；鮮明的', mastered: 0, nextReview: 0 },
+            { en: 'harmony', cn: '和諧；協調', mastered: 0, nextReview: 0 },
+            { en: 'embrace', cn: '接受；信奉；擁抱', mastered: 0, nextReview: 0 },
+            { en: 'wander', cn: '閒逛；漫步', mastered: 0, nextReview: 0 },
+            { en: 'scenic', cn: '風景優美的', mastered: 0, nextReview: 0 },
+            { en: 'authenticity', cn: '真實性；道地', mastered: 0, nextReview: 0 },
+            { en: 'accommodate', cn: '容納', mastered: 0, nextReview: 0 },
+            { en: 'negotiation', cn: '談判', mastered: 0, nextReview: 0 },
+            { en: 'proposal', cn: '提案', mastered: 0, nextReview: 0 }
+        ],
+        '大學 6000(測試)': [
+            { en: 'sustain', cn: '維持', mastered: 0, nextReview: 0 },
+            { en: 'implement', cn: '實施', mastered: 0, nextReview: 0 },
+        ]
+    };
+
+    // 記憶曲線間隔天數 (第一次3天、第二次7天、第三次20天、第四次30天, 之後每次都 100 天)
+    const REVIEW_INTERVALS = [3, 7, 20, 30,100]; 
+
+    let wordSets = {}; // 所有單字集資料
+    
+    // 待背單字清單（單字物件），用於計算數量
+    let todayWordsToReview = []; 
+    // 測驗任務清單（包含 word 和 direction）
+    let todayQuizList = []; 
+    // 新增：紀錄每個單字任務的完成狀態
+    let quizTaskHistory = {}; 
+    
+    let currentWordIndex = 0; // 當前背誦任務在 todayQuizList 中的索引
+    let isAnswerShown = false; // 是否已顯示答案
+    let currentEditingSet = ''; // 當前正在編輯的單字集名稱
+
+    // --- 介面切換函數 ---
+
+    window.goToHomePage = function() { // 將函數提升至 window 作用域以供 HTML 呼叫
+        HOME_PAGE.style.display = 'block';
+        QUIZ_PAGE.style.display = 'none';
+        EDIT_PAGE.style.display = 'none';
+        updateTodayCount(); // 回到首頁重新計算
+        CUSTOM_SET_INPUT.value = ''; // 清空輸入框
+    }
+
+    function goToQuizPage() {
+        HOME_PAGE.style.display = 'none';
+        QUIZ_PAGE.style.display = 'block';
+        EDIT_PAGE.style.display = 'none';
+    }
+
+    function goToEditPage(setName) {
+        HOME_PAGE.style.display = 'none';
+        QUIZ_PAGE.style.display = 'none';
+        EDIT_PAGE.style.display = 'block';
+
+        currentEditingSet = setName;
+        EDIT_TITLE.textContent = `✏️ 編輯單字集: ${setName}`;
+
+        // 載入當前單字集的內容
+        const currentSet = wordSets[setName] || [];
+        const currentList = currentSet
+            .filter(w => w.en && w.cn) 
+            .map(w => `${w.en.trim()} = ${w.cn.trim()}`)
+            .join('\n');
+
+        EDIT_TEXTAREA.value = currentList;
+        EDIT_TEXTAREA.focus();
+    }
+
+
+    // --- localStorage 存取函數 ---
+
+    function saveData() {
+        const dataToSave = {};
+        Object.keys(wordSets).forEach(setName => {
+            // 避免保存非陣列屬性
+            if(Array.isArray(wordSets[setName])) {
+                dataToSave[setName] = wordSets[setName].map(word => ({
+                    en: word.en || '',
+                    cn: word.cn || '',
+                    mastered: word.mastered || 0,
+                    nextReview: word.nextReview || 0,
+                })).filter(word => word.en && word.cn);
+                // 額外儲存 checked 狀態
+                dataToSave[setName].checked = wordSets[setName].checked || false; 
+            }
+        });
+
+        localStorage.setItem('wordSets', JSON.stringify(dataToSave));
+        localStorage.setItem('lastLoginDate', getTodayDateString());
+    }
+
+    function loadData() {
+        const storedSets = localStorage.getItem('wordSets');
+        if (storedSets) {
+            wordSets = JSON.parse(storedSets);
+        }
+
+        // 檢查並整合預設單字集
+        Object.keys(defaultSets).forEach(setName => {
+            if (!wordSets[setName] || !Array.isArray(wordSets[setName])) {
+                // 如果本地沒有，則使用預設
+                wordSets[setName] = defaultSets[setName].map(word => ({
+                    ...word,
+                    checked: false,
+                }));
+            }
+            
+            // 確保所有單字物件都有完整屬性，並加上 setName 屬性方便追蹤
+            wordSets[setName] = wordSets[setName].map(word => ({
+                en: word.en || '',
+                cn: word.cn || '',
+                mastered: word.mastered || 0,
+                nextReview: word.nextReview || 0,
+                setName: setName,
+            })).filter(word => word.en && word.cn);
+
+            // 確保 checked 屬性存在於陣列上
+            wordSets[setName].checked = (wordSets[setName].checked !== undefined) ? wordSets[setName].checked : false;
+        });
+        
+        const lastLoginDate = localStorage.getItem('lastLoginDate');
+        const todayDate = getTodayDateString();
+
+        if (lastLoginDate !== todayDate) {
+            refreshReviewStatus(); // 跨日重設過期單字的 mastered 狀態
+        }
+    }
+
+    // --- 日期與時間工具 ---
+
+    function getTodayDateString() {
+        const date = new Date();
+        // 假設每天早上 4 點重置
+        if (date.getHours() < 4) { 
+            date.setDate(date.getDate() - 1);
+        }
+        return date.toISOString().split('T')[0];
+    }
+
+    function addDaysToDate(days) {
+        const date = new Date();
+        // 將基準時間設定為今天的 4AM
+        const baseTimestamp = date.setHours(4, 0, 0, 0); 
+        const futureDate = new Date(baseTimestamp);
+        
+        futureDate.setDate(futureDate.getDate() + days);
+        
+        return futureDate.getTime();
+    }
+    
+    // --- 核心邏輯：單字集管理 ---
+
+    function renderWordSets() {
+        WORD_SET_LIST.innerHTML = '';
+        const allSetNames = Object.keys(wordSets);
+
+        allSetNames.forEach(setName => {
+            const set = wordSets[setName];
+            // 確保 set 是一個陣列
+            const wordCount = Array.isArray(set) ? set.length : 0; 
+            const isDefault = !!defaultSets[setName];
+
+            const li = document.createElement('li');
+            const isChecked = set.checked || false;
+            li.innerHTML = `
+                <input type="checkbox" id="set-${setName}" data-set-name="${setName}" ${isChecked ? 'checked' : ''}>
+                <label for="set-${setName}" class="set-name-display">
+                    ${setName} (${wordCount} 個單字) ${isChecked ? '✔️' : ''}
+                </label>
+                <button class="edit-set-btn" data-set-name="${setName}">編輯單字</button>
+                ${!isDefault ? `<button class="delete-set-btn" data-set-name="${setName}">刪除</button>` : ''}
+            `;
+            WORD_SET_LIST.appendChild(li);
+        });
+
+        document.querySelectorAll('.word-set-list input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', handleSetCheck);
+        });
+        document.querySelectorAll('.edit-set-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => goToEditPage(e.target.dataset.setName));
+        });
+        document.querySelectorAll('.delete-set-btn').forEach(btn => {
+            btn.addEventListener('click', handleDeleteSet);
+        });
+
+        updateTodayCount();
+    }
+
+    function handleSetCheck(event) {
+        const setName = event.target.dataset.setName;
+        const isChecked = event.target.checked;
+
+        if (wordSets[setName]) {
+            wordSets[setName].checked = isChecked;
+            saveData();
+            renderWordSets();
+        }
+    }
+
+    function handleDeleteSet(event) {
+        const setName = event.target.dataset.setName;
+        if (confirm(`確定要刪除單字集：${setName} 嗎？此操作不可復原。`)) {
+            delete wordSets[setName];
+            saveData();
+            renderWordSets();
+        }
+    }
+    
+    SAVE_EDIT_BTN.addEventListener('click', () => {
+        const setName = currentEditingSet;
+        if (!setName) return;
+
+        const newWordsInput = EDIT_TEXTAREA.value;
+        const lines = newWordsInput.split('\n');
+        const newWords = [];
+        const isChecked = wordSets[setName]?.checked || false;
+
+        lines.forEach(line => {
+            const trimmedLine = line.trim();
+            // 修正：正規表達式讓 = 前後空白彈性更大
+            const match = trimmedLine.match(/^(.+?)\s*=\s*(.+)$/); 
+
+            if (match) {
+                const en = match[1].trim();
+                const cn = match[2].trim();
+                
+                if (en && cn) {
+                    // 檢查單字是否已存在，以保留進度
+                    const existingWord = wordSets[setName]?.find(w => w.en === en);
+                    
+                    newWords.push(existingWord ? 
+                        { ...existingWord, cn: cn, setName: setName } : 
+                        { en: en, cn: cn, mastered: 0, nextReview: 0, setName: setName }
+                    );
+                }
+            }
+        });
+
+        if (newWords.length === 0 && (wordSets[setName]?.length || 0) > 0) {
+            if (!confirm('您輸入的單字清單是空的，確定要清空此單字集嗎？')) {
+                return;
+            }
+        }
+        
+        wordSets[setName] = newWords;
+        wordSets[setName].checked = isChecked; 
+
+        saveData();
+        alert(`單字集「${setName}」已更新，共有 ${newWords.length} 個單字。`);
+        goToHomePage();
+    });
+    
+    CANCEL_EDIT_BTN.addEventListener('click', () => {
+        if (confirm('確定要取消編輯嗎？您的變更將不會儲存。')) {
+            goToHomePage();
+        }
+    });
+    
+    ADD_CUSTOM_SET_BTN.addEventListener('click', () => {
+        const setName = CUSTOM_SET_INPUT.value.trim();
+        if (!setName) {
+            alert('請輸入單字集名稱！');
+            return;
+        }
+        
+        if (!wordSets[setName]) {
+            wordSets[setName] = [];
+            wordSets[setName].checked = false;
+        }
+
+        goToEditPage(setName);
+    });
+
+    // --- 核心邏輯：刷新與計數 ---
+
+    function refreshReviewStatus() {
+        const fourAMTodayTimestamp = new Date().setHours(4, 0, 0, 0); 
+
+        Object.keys(wordSets).forEach(setName => {
+            const set = wordSets[setName];
+            if (Array.isArray(set)) {
+                set.forEach(word => {
+                    // 如果單字設定了下次複習時間，且該時間在今天早上 4 點前
+                    if (word.nextReview > 0 && word.nextReview < fourAMTodayTimestamp) {
+                        // 則將其掌握度重設為 0，排入今日複習
+                        word.mastered = 0; 
+                        word.nextReview = 0;
+                    }
+                });
+            }
+        });
+        saveData();
+    }
+
+    function updateTodayCount() {
+        todayWordsToReview = []; // 待背單字清單（單字物件）
+        const fourAMTodayTimestamp = new Date().setHours(4, 0, 0, 0);
+
+        Object.keys(wordSets).forEach(setName => {
+            const set = wordSets[setName];
+            if (Array.isArray(set) && set.checked) {
+                set.forEach(word => {
+                    // nextReview 為 0 (新單字) 或 nextReview 時間戳記早於今天早上 4 點 (需複習)
+                    if (word.nextReview === 0 || word.nextReview < fourAMTodayTimestamp) {
+                        todayWordsToReview.push(word);
+                    }
+                });
+            }
+        });
+
+        // 顯示的是需要背誦的「單字」數量
+        COUNT_VALUE.textContent = todayWordsToReview.length; 
+        START_QUIZ_BTN.disabled = todayWordsToReview.length === 0;
+        START_QUIZ_BTN.textContent = todayWordsToReview.length === 0 ? '今日任務已完成 🎉🎉🎉' : `開始背單字 (共 ${todayWordsToReview.length} 詞)`;
+    }
+
+
+    // --- 核心邏輯：背誦介面 ---
+
+    START_QUIZ_BTN.addEventListener('click', startQuiz);
+
+    function startQuiz() {
+        if (todayWordsToReview.length === 0) {
+            alert('今日沒有單字需要背誦！');
+            return;
+        }
+        
+        // 1. 生成雙向測驗任務
+        todayQuizList = [];
+        quizTaskHistory = {}; // 重置任務歷史紀錄
+        
+        todayWordsToReview.forEach(word => {
+            // 英 -> 中 任務
+            todayQuizList.push({ 
+                word: word, 
+                isEnglishToChinese: true, 
+                key: `${word.setName}-${word.en}-en2cn` 
+            }); 
+            // 中 -> 英 任務
+            todayQuizList.push({ 
+                word: word, 
+                isEnglishToChinese: false, 
+                key: `${word.setName}-${word.en}-cn2en` 
+            });
+            // 初始化每個單字在兩個方向的完成狀態
+            quizTaskHistory[word.en] = { en2cn: false, cn2en: false, failed: false };
+        });
+        
+        // 2. 隨機排序任務清單
+        todayQuizList.sort(() => Math.random() - 0.5);
+        
+        goToQuizPage();
+        currentWordIndex = 0;
+        displayCurrentWord();
+    }
+
+    function displayCurrentWord() {
+        if (currentWordIndex >= todayQuizList.length) {
+            // 測驗結束
+            CARD_FRONT.textContent = '今日任務完成！';
+            CARD_BACK.textContent = '點擊「返回首頁」查看進度';
+            CARD_BACK.style.display = 'block';
+            QUIZ_CONTROLS.classList.add('quiz-controls-hidden');
+            QUIZ_STATUS.textContent = `已完成所有 ${todayWordsToReview.length * 2} 個任務！`; 
+            saveData(); // 最後儲存一次
+            return;
+        }
+
+        const currentTask = todayQuizList[currentWordIndex];
+        const currentWord = currentTask.word;
+        const isEnglishToChinese = currentTask.isEnglishToChinese; 
+
+        // 根據方向設置卡片內容
+        CARD_FRONT.textContent = isEnglishToChinese ? currentWord.en : currentWord.cn;
+        CARD_BACK.textContent = isEnglishToChinese ? currentWord.cn : currentWord.en;
+        CARD_BACK.style.display = 'none';
+        QUIZ_CONTROLS.classList.add('quiz-controls-hidden');
+        isAnswerShown = false;
+        
+        // 顯示狀態
+        const directionText = isEnglishToChinese ? '英→中' : '中→英';
+        QUIZ_STATUS.textContent = `任務: ${currentWordIndex + 1} / ${todayQuizList.length} (${directionText} | 單字集: ${currentWord.setName}) - 等級: ${currentWord.mastered}`;
+    }
+
+    // 點擊卡片顯示答案
+    WORD_CARD.addEventListener('click', () => {
+        if (!isAnswerShown && currentWordIndex < todayQuizList.length) {
+            CARD_BACK.style.display = 'block';
+            QUIZ_CONTROLS.classList.remove('quiz-controls-hidden');
+            isAnswerShown = true;
+        }
+    });
+
+    MASTERED_BTN.addEventListener('click', () => handleQuizResult(true));
+    NOT_MASTERED_BTN.addEventListener('click', () => handleQuizResult(false));
+
+    function handleQuizResult(isMastered) {
+        if (!isAnswerShown) return;
+
+        const currentTask = todayQuizList[currentWordIndex];
+        const currentWord = currentTask.word; // 待複習清單中的單字物件
+        const wordKey = currentWord.en;
+        const direction = currentTask.isEnglishToChinese ? 'en2cn' : 'cn2en';
+
+        // 1. 處理單字進度更新 (在原始 wordSets 內更新)
+        const originalSet = wordSets[currentWord.setName];
+        const originalWordIndex = originalSet?.findIndex(w => w.en === wordKey);
+
+        if (originalWordIndex !== -1) {
+            const word = originalSet[originalWordIndex];
+            
+            if (!isMastered) {
+                // 只要任一方向「沒背熟」，則將該單字進度重設，並設置為明天複習 (間隔 1 天)
+                word.mastered = 0; 
+                word.nextReview = addDaysToDate(1);
+                quizTaskHistory[wordKey].failed = true; // 標記為失敗
+                
+            } 
+            
+            // 2. 更新任務歷史
+            if (isMastered) {
+                quizTaskHistory[wordKey][direction] = true;
+            }
+            
+            // 3. 檢查單字是否已完成雙向複習 (僅在非失敗且雙向都成功時才升級)
+            const history = quizTaskHistory[wordKey];
+            if (!history.failed && history.en2cn && history.cn2en) {
+                // 雙向都成功且沒失敗過，則提升等級
+                word.mastered = Math.min(word.mastered + 1, REVIEW_INTERVALS.length);
+                const days = REVIEW_INTERVALS[word.mastered - 1] || REVIEW_INTERVALS[REVIEW_INTERVALS.length - 1]; // 確保超過長度時仍使用最長間隔
+                word.nextReview = addDaysToDate(days);
+                
+                // 將該單字從今日待背清單中移除（雖然功能上並非必要，但可以保持邏輯清晰）
+                const todayIndex = todayWordsToReview.findIndex(w => w.en === wordKey);
+                if (todayIndex !== -1) {
+                    todayWordsToReview.splice(todayIndex, 1);
+                }
+            }
+            
+            originalSet[originalWordIndex] = word;
+            
+            // 同步更新當前任務中的 word 物件 (保持一致性)
+            currentTask.word = word; 
+        }
+
+        // 4. 無論背熟與否，都移至下一個任務
+        currentWordIndex++;
+        saveData();
+        displayCurrentWord();
+    }
+
+    // --- 初始化 ---
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+        renderWordSets();
+        goToHomePage(); 
+    });
+</script>
+
+
+</body>
+</html>
+
+
